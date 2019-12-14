@@ -1,20 +1,21 @@
 package session
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/3dw1nM0535/go-auth/handlers"
 	"github.com/3dw1nM0535/go-auth/utils"
+	"github.com/Skarlso/goquestwebapp/database"
+	"github.com/gin-gonic/contrib/sessions"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"github.com/gin-gonic/contrib/sessions"
-	"github.com/3dw1nM0535/go-auth/handlers"
-	"github.com/gin-gonic/gin"
 )
 
 var clientid, clientsecret string
@@ -119,7 +120,7 @@ func authHandler(c *gin.Context) {
 		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving session. Please try again."})
 		return
 	}
-	
+
 	seen := false
 	db := database.MongoDBConnection{}
 	if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
@@ -141,7 +142,7 @@ func main() {
 	app := gin.New()
 	store := sessions.NewCookieStore([]byte(handlers.RandToken(64)))
 	store.Options(sessions.Options{
-		Path: "/",
+		Path:   "/",
 		MaxAge: 86400 * 7,
 	})
 	app.Use(sessions.Sessions("goquestsession", store))
@@ -149,8 +150,8 @@ func main() {
 	app.Static("/img", "./static/img")
 	app.LoadHTMLGlob("templates/*")
 
-	app.GET("/", indexHandler)
-	app.GET("/login", loginHandler)
+	app.GET("/", IndexHandler)
+	app.GET("/login", LoginHandler)
 	app.GET("/auth", authHandler)
 	app.Run("127.0.0.1:9090")
 }
