@@ -3,24 +3,19 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/3dw1nM0535/go-auth/utils"
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
-
-// Credentials : user data struct/composite literals
-type Credentials struct {
-	Cid     string `json:"client_id"`
-	Csecret string `json:"client_secret"`
-}
 
 // User : retrieved and authenticated
 type User struct {
@@ -35,7 +30,7 @@ type User struct {
 	Gender        string `json:"gender"`
 }
 
-var cred Credentials
+var client_id, client_secret string
 var conf *oauth2.Config
 var state string
 var store = sessions.NewCookieStore([]byte("secret"))
@@ -67,19 +62,19 @@ func loginHandler(c *gin.Context) {
 }
 
 func init() {
-	var c Credentials
+	err := godotenv.Load()
+	client_id = utils.MustGet("ClientID")
+	client_secret = utils.MustGet("ClientSecret")
 	file, err := ioutil.ReadFile("./cred.json")
 	log.Println(file)
 	if err != nil {
 		fmt.Printf("File error: %v\n", err)
 		os.Exit(1)
 	}
-	log.Println(file)
-	json.Unmarshal(file, &c)
 
 	conf = &oauth2.Config{
-		ClientID:     c.Cid,
-		ClientSecret: c.Csecret,
+		ClientID:     client_id,
+		ClientSecret: client_secret,
 		RedirectURL:  "http://localhost:9090/auth",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
