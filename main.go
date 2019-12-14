@@ -30,7 +30,7 @@ type User struct {
 	Gender        string `json:"gender"`
 }
 
-var client_id, client_secret string
+var clientid, clientsecret string
 var conf *oauth2.Config
 var state string
 var store = sessions.NewCookieStore([]byte("secret"))
@@ -63,8 +63,8 @@ func loginHandler(c *gin.Context) {
 
 func init() {
 	err := godotenv.Load()
-	client_id = utils.MustGet("ClientID")
-	client_secret = utils.MustGet("ClientSecret")
+	clientid = utils.MustGet("ClientID")
+	clientsecret = utils.MustGet("ClientSecret")
 	file, err := ioutil.ReadFile("./cred.json")
 	log.Println(file)
 	if err != nil {
@@ -73,8 +73,8 @@ func init() {
 	}
 
 	conf = &oauth2.Config{
-		ClientID:     client_id,
-		ClientSecret: client_secret,
+		ClientID:     clientid,
+		ClientSecret: clientsecret,
 		RedirectURL:  "http://localhost:9090/auth",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
