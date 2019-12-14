@@ -3,6 +3,8 @@ module github.com/3dw1nM0535/go-auth
 go 1.13
 
 require (
+	github.com/Skarlso/goquestwebapp v0.0.0-20161109102658-a4b2ef82bc0c
+	github.com/fatih/color v1.7.0 // indirect
 	github.com/gin-contrib/sessions v0.0.1
 	github.com/gin-gonic/contrib v0.0.0-20191209060500-d6e26eeaa607
 	github.com/gin-gonic/gin v1.5.0
@@ -11,7 +13,9 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/json-iterator/go v1.1.8 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
+	github.com/mattn/go-sqlite3 v2.0.1+incompatible
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
 	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect

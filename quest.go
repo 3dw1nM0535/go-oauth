@@ -1,21 +1,25 @@
-package main
+package session
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/3dw1nM0535/go-auth/utils"
-	"github.com/gin-gonic/contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"github.com/gin-gonic/contrib/sessions"
+	"github.com/3dw1nM0535/go-auth/handlers"
+	"github.com/gin-gonic/gin"
 )
+
+var clientid, clientsecret string
+var conf *oauth2.Config
+var state string
 
 // User : retrieved and authenticated
 type User struct {
@@ -30,13 +34,8 @@ type User struct {
 	Gender        string `json:"gender"`
 }
 
-var clientid, clientsecret string
-var conf *oauth2.Config
-var state string
-var store = sessions.NewCookieStore([]byte("secret"))
-
-// indexHandler : handle index page
-func indexHandler(c *gin.Context) {
+// IndexHandler : handle index page
+func IndexHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{})
 }
 
@@ -45,20 +44,15 @@ func getLoginURL(state string) string {
 	return conf.AuthCodeURL(state)
 }
 
-// randToken : generate random token
-func randToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-
 // LoginHandler : store token in session
-func loginHandler(c *gin.Context) {
-	state = randToken()
+func LoginHandler(c *gin.Context) {
+	state := handlers.RandToken(32)
 	session := sessions.Default(c)
 	session.Set("state", state)
+	log.Printf("Stored session: %v\n", state)
 	session.Save()
-	c.Writer.Write([]byte("<html><title>Golang Google</title> <body><a href='" + getLoginURL(state) + "'><button>Login with Google</button></a></body></html>"))
+	link := getLoginURL(state)
+	c.HTML(http.StatusOK, "auth.tmpl", gin.H{"link": link})
 }
 
 func init() {
@@ -88,33 +82,68 @@ func authHandler(c *gin.Context) {
 	session := sessions.Default(c)
 	retrievedState := session.Get("state")
 	if retrievedState != c.Request.URL.Query().Get("state") {
-		c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("Invalid session state: %s", retrievedState))
+		c.HTML(http.StatusUnauthorized, "error.tmpl", gin.H{"message": "Invalid session state."})
 		return
 	}
 
 	// Handle the exchange code to initiate transport
-	token, err := conf.Exchange(oauth2.NoContext, c.Query("code"))
+	code := c.Request.URL.Query().Get("code")
+	token, err := conf.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		log.Println("Error during credential exchange: ", err.Error())
+		log.Println(err)
+		c.HTML(http.StatusBadRequest, "error.tmpl", code)
 		return
 	}
 	// Construct the client
 	client := conf.Client(oauth2.NoContext, token)
-	res, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
+	userInfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		log.Println("Error communicating with google API: ", err.Error())
+		log.Println(err)
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	defer res.Body.Close()
-	data, _ := ioutil.ReadAll(res.Body)
-	log.Println("Response Body: ", string(data))
+	defer userInfo.Body.Close()
+	data, _ := ioutil.ReadAll(userInfo.Body)
+	u := User{}
+	if err = json.Unmarshal(data, &u); err != nil {
+		log.Println(err)
+		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"messag": "Error marshalling response. Please try again."})
+		return
+	}
+
+	session.Set("user-id", u.Email)
+	err = session.Save()
+	if err != nil {
+		log.Println(err)
+		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving session. Please try again."})
+		return
+	}
+	
+	seen := false
+	db := database.MongoDBConnection{}
+	if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
+		seen = true
+	} else {
+		err := db.SaveUser(&u)
+		if err != nil {
+			log.Println(err)
+			c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving user. Please try again."})
+			return
+		}
+	}
+
+	c.HTML(http.StatusOK, "battle.tmpl", gin.H{"email": u.Email, "seen": seen})
+
 }
 
 func main() {
 	app := gin.New()
+	store := sessions.NewCookieStore([]byte(handlers.RandToken(64)))
+	store.Options(sessions.Options{
+		Path: "/",
+		MaxAge: 86400 * 7,
+	})
 	app.Use(sessions.Sessions("goquestsession", store))
 	app.Static("/css", "./static/css")
 	app.Static("/img", "./static/img")
