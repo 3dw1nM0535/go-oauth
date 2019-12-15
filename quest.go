@@ -109,15 +109,14 @@ func authHandler(c *gin.Context) {
 	u := User{}
 	if err = json.Unmarshal(data, &u); err != nil {
 		log.Println(err)
-		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"messag": "Error marshalling response. Please try again."})
+		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": err})
 		return
 	}
 
 	session.Set("user-id", u.Email)
-	err = session.Save()
-	if err != nil {
+	if err = session.Save(); err != nil {
 		log.Println(err)
-		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving session. Please try again."})
+		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": err})
 		return
 	}
 
