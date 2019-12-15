@@ -1,4 +1,4 @@
-package session
+package main
 
 import (
 	"encoding/json"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/3dw1nM0535/go-auth/handlers"
 	"github.com/3dw1nM0535/go-auth/utils"
-	"github.com/Skarlso/goquestwebapp/database"
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -31,7 +30,7 @@ type User struct {
 	Profile       string `json:"profile"`
 	Picture       string `json:"picture"`
 	Email         string `json:"email"`
-	EmailVerified string `json:"email_verified"`
+	EmailVerified bool   `json:"email_verified"`
 	Gender        string `json:"gender"`
 }
 
@@ -120,20 +119,7 @@ func authHandler(c *gin.Context) {
 		return
 	}
 
-	seen := false
-	db := database.MongoDBConnection{}
-	if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
-		seen = true
-	} else {
-		err := db.SaveUser(&u)
-		if err != nil {
-			log.Println(err)
-			c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving user. Please try again."})
-			return
-		}
-	}
-
-	c.HTML(http.StatusOK, "battle.tmpl", gin.H{"email": u.Email, "seen": seen})
+	c.HTML(http.StatusOK, "battle.tmpl", gin.H{"email": u.Email})
 
 }
 
