@@ -2,11 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/3dw1nM0535/go-auth/handlers"
 	"github.com/3dw1nM0535/go-auth/utils"
@@ -57,14 +55,11 @@ func LoginHandler(c *gin.Context) {
 
 func init() {
 	err := godotenv.Load()
+	if err != nil {
+		log.Panicf("Error loading ENV variables: " + err.Error())
+	}
 	clientid = utils.MustGet("ClientID")
 	clientsecret = utils.MustGet("ClientSecret")
-	file, err := ioutil.ReadFile("./cred.json")
-	log.Println(file)
-	if err != nil {
-		fmt.Printf("File error: %v\n", err)
-		os.Exit(1)
-	}
 
 	conf = &oauth2.Config{
 		ClientID:     clientid,
@@ -79,6 +74,7 @@ func init() {
 
 func authHandler(c *gin.Context) {
 	// Check state validity
+	log.Println(c)
 	session := sessions.Default(c)
 	retrievedState := session.Get("state")
 	if retrievedState != c.Request.URL.Query().Get("state") {
@@ -105,6 +101,7 @@ func authHandler(c *gin.Context) {
 
 	defer userInfo.Body.Close()
 	data, _ := ioutil.ReadAll(userInfo.Body)
+	log.Println(string(data))
 	u := User{}
 	if err = json.Unmarshal(data, &u); err != nil {
 		log.Println(err)
