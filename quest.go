@@ -15,7 +15,7 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-var clientid, clientsecret string
+var clientid, clientsecret, host, port string
 var conf *oauth2.Config
 var state string
 
@@ -60,12 +60,15 @@ func init() {
 	}
 	clientid = utils.MustGet("ClientID")
 	clientsecret = utils.MustGet("ClientSecret")
+	host = utils.MustGet("SERVER_HOST")
+	port = utils.MustGet("SERVER_PORT")
 
 	conf = &oauth2.Config{
 		ClientID:     clientid,
 		ClientSecret: clientsecret,
 		RedirectURL:  "http://localhost:9090/auth",
 		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/userinfo.email",
 		},
 		Endpoint: google.Endpoint,
@@ -74,7 +77,6 @@ func init() {
 
 func authHandler(c *gin.Context) {
 	// Check state validity
-	log.Println(c)
 	session := sessions.Default(c)
 	retrievedState := session.Get("state")
 	if retrievedState != c.Request.URL.Query().Get("state") {
@@ -135,5 +137,5 @@ func main() {
 	app.GET("/", IndexHandler)
 	app.GET("/login", LoginHandler)
 	app.GET("/auth", authHandler)
-	app.Run("127.0.0.1:9090")
+	app.Run(host + ":" + port)
 }
